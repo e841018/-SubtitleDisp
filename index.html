@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Untitled</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body style="margin: 0;">
+        <input id="file" type="file" accept=".srt" style="display: none;"/>
+        
+        <div>
+            <div style="float: left; width: 3em">
+                <button id="load" style="text-align: center; width: 100%;">Load</button>
+            </div>
+            <div style="margin-left: 3em; margin-right: 1em;">
+                <input id="slider" type="range" min="0" max="0" value="0" style="width: 100%;">
+            </div>
+        </div>
+        
+        <div style="font-size: 16pt;">
+            <div id="time" style="float: left; width: 7.5em">
+                00:00:00,000
+            </div>
+            <div id="subtitle" style="text-align: center; margin-left: 7.5em; margin-right: 7.5em;">
+                Subtitles
+            </div>
+        </div>
+        
+        <script>
+            'use strict';
+            
+            ////////////////////////////////////////////////////////////////////
+            // load and parse SRT
+            ////////////////////////////////////////////////////////////////////
+            
+            function parseTime(text){
+                let hms_ms = text.split(',');
+                let hms = hms_ms[0].split(':').map(Number);
+                let ms = Number(hms_ms[1]);
+                let sec = hms[0]*3600 + hms[1]*60 + hms[2] + ms*0.001;
+                return sec;
+            }
+            
+            function pad(num, len=2){
+                // num should be integer
+                return String(num).padStart(len, '0');
+            }
+            
+            function time2str(sec){
+                let h = Math.floor(sec/3600);
+                let m = Math.floor(sec%3600/60);
+                let s = Math.floor(sec%60);
+                let ms = Math.floor(sec%1/0.001);
+                return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`
+            }
+            
+            class Subtitle{
+                constructor(n, start, end, text){
+                    this.n = n;
+                    this.s = start;
+                    this.e = end;
+                    this.text = text;
+                }
+            }
+            
+            function loadSRT(srtText, subs){
+                subs.length = 0; // clear the list
+                subs.push(new Subtitle(0, 0, 0, 'dummy'));
+                let rawSubs = srtText.replaceAll('\r\n', '\n').split('\n\n');
+                for(let rawSub of rawSubs){
+                    let lines = rawSub.split('\n');
+                    if(lines.length === 1)
+                        continue;
+                    let n = Number(lines[0]);
+                    let times = lines[1].split('-->').map(parseTime);
+                    let text = lines.slice(2).join('\n');
+                    let sub = new Subtitle(n, times[0], times[1], text);
+                    if(subs.length !== n)
+                        console.error(`Index ${n} out of order, ${subs.length} expected`);
+                    subs.push(sub);
+                }
+                document.querySelector('#slider').max = subs.length - 1;
+            };
+        
+            ////////////////////////////////////////////////////////////////////
+            // callbacks
+            ////////////////////////////////////////////////////////////////////
+            
+            // buffer for subtitles
+            let subs = [];
+            
+            // load button triggers file input
+            document.querySelector('#load').onclick = function(e){
+                document.querySelector('#file').click();
+            };
+            
+            // file selection event
+            document.querySelector('#file').onchange = function(e){
+                let file = e.target.files[0];
+                name = file.name.replace(/(\.srt|\.SRT)$/, '');
+                document.querySelector('head>title').text = name;
+                
+                let reader = new FileReader();
+                reader.onload = function(e){
+                    loadSRT(e.target.result, subs); // `subs` is a global variable
+                };
+                reader.readAsText(file);
+            };
+            
+            // slider
+            document.querySelector('#slider').oninput = function(e){
+                let sub = subs[this.value];
+                document.querySelector('#time').innerText = time2str(sub.s);
+                document.querySelector('#subtitle').innerText = sub.text;
+            }
+            
+            // keydown
+            document.addEventListener('keydown', function(e){
+                let slider = document.querySelector('#slider');
+                if(e.keyCode === 37){ // left
+                    slider.value--;
+                }
+                else if(e.keyCode === 39){ // right
+                    slider.value++;
+                }
+                slider.dispatchEvent(new Event('input'));
+            });
+            
+            ////////////////////////////////////////////////////////////////////
+            // debugging
+            ////////////////////////////////////////////////////////////////////
+            
+            <!-- function readTextFile(file, cb){ -->
+                <!-- let rawFile = new XMLHttpRequest(); -->
+                <!-- rawFile.open("GET", file); -->
+                <!-- rawFile.onreadystatechange = function(){ -->
+                    <!-- if(rawFile.readyState === 4) -->
+                        <!-- if(rawFile.status === 200 || rawFile.status === 0) -->
+                            <!-- cb(rawFile.responseText); -->
+                <!-- } -->
+                <!-- rawFile.send(); -->
+            <!-- } -->
+            <!-- readTextFile('http://localhost:8080/STEINS_GATE_001.srt', (text) => loadSRT(text, subs)); -->
+            
+        </script>
+    </body>
+</html>
