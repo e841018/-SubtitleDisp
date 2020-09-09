@@ -87,7 +87,7 @@
             ////////////////////////////////////////////////////////////////////
             
             // buffer for subtitles
-            let subs = [];
+            let subs = [new Subtitle(0, 0, 0, 'dummy')];
             
             // load button triggers file input
             document.querySelector('#load').onclick = function(e){
@@ -119,11 +119,12 @@
                 let slider = document.querySelector('#slider');
                 if(e.keyCode === 37){ // left
                     slider.value--;
+                    slider.dispatchEvent(new Event('input'));
                 }
                 else if(e.keyCode === 39){ // right
                     slider.value++;
+                    slider.dispatchEvent(new Event('input'));
                 }
-                slider.dispatchEvent(new Event('input'));
             });
             
             ////////////////////////////////////////////////////////////////////
