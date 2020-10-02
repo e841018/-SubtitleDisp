@@ -79,7 +79,10 @@
                         console.error(`Index ${n} out of order, ${subs.length} expected`);
                     subs.push(sub);
                 }
-                document.querySelector('#slider').max = subs.length - 1;
+                let slider = document.querySelector('#slider');
+                slider.max = subs.length - 1;
+                slider.value = 0;
+                slider.dispatchEvent(new Event('input'));
             };
         
             ////////////////////////////////////////////////////////////////////
